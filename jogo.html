@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Educativo: Fonética e Acentuação</title>
+    <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<div class="quiz-container">
+    <div id="quiz-screen">
+        <h1>Quiz: Encontros Vocálicos e Acentuação</h1>
+        <div class="progress" id="progress">Pergunta 1 de 5</div>
+        <div class="question" id="question">Carregando pergunta...</div>
+        
+        <div class="options-container" id="options">
+            </div>
+
+        <div class="explanation-container" id="explanation-box">
+            <div class="explanation-title" id="explanation-status">Feedback:</div>
+            <div id="explanation-text">Texto explicativo aqui.</div>
+        </div>
+
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">Próxima Pergunta</button>
+    </div>
+
+    <div id="score-screen" class="score-container">
+        <div class="score-title">Fim do Quiz! 🎉</div>
+        <p id="final-score">Você acertou 0 de 5 perguntas.</p>
+        <button class="restart-btn" onclick="restartQuiz()">Refazer Quiz</button>
+    </div>
+</div>
+<script src="src/script.js"></script>
+</body>
+</html>

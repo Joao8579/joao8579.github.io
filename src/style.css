@@ -1,0 +1,160 @@
+:root {
+    --primary-color: #4A90E2;
+    --success-color: #2ECC71;
+    --error-color: #E74C3C;
+    --neutral-dark: #2C3E50;
+    --neutral-light: #F8F9FA;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #E9ECEF;
+    color: var(--neutral-dark);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.quiz-container {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    max-width: 650px;
+    width: 100%;
+}
+
+h1 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    font-size: 1.8rem;
+}
+
+.progress {
+    font-size: 0.9rem;
+    color: #7F8C8D;
+    margin-bottom: 10px;
+    text-align: right;
+}
+
+.question {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.option-btn {
+    background-color: var(--neutral-light);
+    border: 2px solid #BDC3C7;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.option-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--neutral-dark);
+}
+
+.option-sub {
+    font-size: 0.85rem;
+    color: #7F8C8D;
+    font-style: italic;
+}
+
+.option-btn:hover:not([disabled]) {
+    background-color: #E2E6EA;
+    border-color: var(--primary-color);
+}
+
+.option-btn:disabled {
+    cursor: not-allowed;
+}
+
+.correct {
+    background-color: #D4EDDA !important;
+    border-color: var(--success-color) !important;
+}
+.correct .option-text, .correct .option-sub {
+    color: #155724 !important;
+}
+
+.wrong {
+    background-color: #F8D7DA !important;
+    border-color: var(--error-color) !important;
+}
+.wrong .option-text, .wrong .option-sub {
+    color: #721C24 !important;
+}
+
+.explanation-container {
+    margin-top: 25px;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #E8F4FD;
+    border-left: 5px solid var(--primary-color);
+    display: none;
+}
+
+.explanation-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #1D6F8A;
+}
+
+.next-btn {
+    width: 100%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 20px;
+    text-align: center;
+    display: none;
+}
+
+.next-btn:hover {
+    background-color: #357ABD;
+}
+
+.score-container {
+    text-align: center;
+    display: none;
+}
+
+.score-title {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+}
+
+.restart-btn {
+    background-color: var(--neutral-dark);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 20px;
+}
