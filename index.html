@@ -7,6 +7,27 @@
     <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
+    <div id="lobby" class="lobby">
+        <h2>Multiplayer — Sala</h2>
+        <div>
+            <input id="player-name" placeholder="Seu nome" />
+            <button id="create-room-btn" onclick="createRoom()">Criar sala</button>
+        </div>
+        <div style="margin-top:8px;">
+            <input id="room-id-input" placeholder="Código da sala" />
+            <button id="join-room-btn" onclick="joinRoom()">Entrar na sala</button>
+        </div>
+        <div style="margin-top:8px;">
+            <span id="current-room-label"></span>
+            <button id="start-game-btn" style="display:none;" onclick="startGame()">Iniciar jogo (host)</button>
+        </div>
+        <div style="margin-top:8px;">
+            <strong>Jogadores:</strong>
+            <ul id="players-list"></ul>
+        </div>
+        <hr />
+    </div>
+    <div id="ready-indicator" class="ready-indicator" style="display:none;">0/0</div>
 <div class="quiz-container">
     <div id="quiz-screen">
         <h1>Quiz: Encontros Vocálicos e Acentuação</h1>
@@ -28,6 +49,17 @@
         <div class="score-title">Fim do Quiz! 🎉</div>
         <p id="final-score">Você acertou 0 de 5 perguntas.</p>
         <button class="restart-btn" onclick="restartQuiz()">Refazer Quiz</button>
+    </div>
+    
+    <div id="multiplayer-results" style="display:none;" class="score-container">
+        <div class="score-title">Resultados — Sala</div>
+        <div>
+            <ol id="multiplayer-leaderboard"></ol>
+        </div>
+        <div style="margin-top:8px;">
+            <button id="leave-room-btn" onclick="leaveRoom()">Sair da sala</button>
+            <button id="restart-room-btn" style="display:none;" onclick="restartRoom()">Reiniciar (host)</button>
+        </div>
     </div>
 </div>
 <script type="module" src="src/script.js"></script>

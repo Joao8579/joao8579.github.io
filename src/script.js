@@ -1,6 +1,7 @@
 ﻿  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
+    import { getDatabase, ref, set, update, onValue, push, child, get } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
   // TODO: Add SDKs for Firebase products that you want to use
   // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -20,6 +21,7 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
+    const db = getDatabase(app);
 const QUIZ_CONFIG = {
     totalQuestionsPerRound: 7
 };
@@ -295,7 +297,268 @@ const QUIZ_CONFIG = {
         initQuiz();
     }
 
-    window.nextQuestion = nextQuestion;
+    // --- Multiplayer variables & helpers ---
+    let currentRoomId = null;
+    let localPlayerId = null;
+    let isHost = false;
+
+    function generateId() {
+        return (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    }
+
+    function generateRoomCode() {
+        return Math.random().toString(36).slice(2,7).toUpperCase();
+    }
+
+    async function createRoom() {
+        const nameInput = document.getElementById('player-name');
+        const name = nameInput && nameInput.value ? nameInput.value.trim() : 'Host';
+        const roomId = generateRoomCode();
+        const playerId = generateId();
+
+        const indices = Array.from({ length: QUIZ_DATA.length }, (_, i) => i);
+        shuffle(indices);
+        const order = indices.slice(0, QUIZ_CONFIG.totalQuestionsPerRound);
+
+        const roomRef = ref(db, 'rooms/' + roomId);
+        await set(roomRef, {
+            currentQuestion: 0,
+            state: 'waiting',
+            host: playerId,
+            order: order,
+            players: {
+                [playerId]: { name: name, score: 0, answered: false }
+            }
+        });
+
+        localPlayerId = playerId;
+        currentRoomId = roomId;
+        isHost = true;
+
+        document.getElementById('current-room-label').innerText = 'Sala: ' + roomId;
+        document.getElementById('start-game-btn').style.display = 'inline-block';
+
+        listenRoom(roomId);
+    }
+
+    async function joinRoom(providedRoomId) {
+        const nameInput = document.getElementById('player-name');
+        const name = nameInput && nameInput.value ? nameInput.value.trim() : 'Jogador';
+        const roomIdInput = document.getElementById('room-id-input');
+        const roomId = providedRoomId || (roomIdInput && roomIdInput.value ? roomIdInput.value.trim() : null);
+        if (!roomId) return alert('Informe o código da sala para entrar.');
+
+        const playerId = generateId();
+        const playerRef = ref(db, 'rooms/' + roomId + '/players/' + playerId);
+        await set(playerRef, { name: name, score: 0, answered: false });
+
+        localPlayerId = playerId;
+        currentRoomId = roomId;
+        isHost = false;
+
+        document.getElementById('current-room-label').innerText = 'Sala: ' + roomId;
+        document.getElementById('start-game-btn').style.display = 'none';
+
+        listenRoom(roomId);
+    }
+
+    function startGame() {
+        if (!isHost || !currentRoomId) return alert('Apenas o host pode iniciar o jogo.');
+        const roomRef = ref(db, 'rooms/' + currentRoomId);
+        update(roomRef, { state: 'playing', currentQuestion: 0 });
+    }
+
+    function listenRoom(roomId) {
+        const roomRef = ref(db, 'rooms/' + roomId);
+        onValue(roomRef, (snap) => {
+            const data = snap.val();
+            if (!data) return;
+
+            // If room finished, show final results
+            if (data.state === 'finished') {
+                showMultiplayerResults(data.players || {});
+                return;
+            }
+
+            // Update players list UI and compute ready/answered counts
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '';
+            let totalPlayers = 0;
+            let answeredCount = 0;
+            if (data.players) {
+                Object.entries(data.players).forEach(([pid, pinfo]) => {
+                    totalPlayers++;
+                    if (pinfo.answered) answeredCount++;
+                    const li = document.createElement('li');
+                    const readyMark = pinfo.answered ? ' ✅' : ' ⏳';
+                    li.innerText = `${pinfo.name || pid} — ${pinfo.score || 0}` + (data.host === pid ? ' (host)' : '') + readyMark;
+                    playersList.appendChild(li);
+                });
+            }
+
+            // Update ready counter badge
+            const badge = document.getElementById('ready-indicator');
+            if (badge) {
+                if (totalPlayers > 0) {
+                    badge.innerText = `${answeredCount}/${totalPlayers}`;
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            // If order exists, set the local quiz data according to it
+            if (data.order) {
+                quizState.data = data.order.map(i => JSON.parse(JSON.stringify(QUIZ_DATA[i])));
+            }
+
+            // Ensure UI visibility depending on state
+            if (data.state === 'playing') {
+                const lobbyEl = document.getElementById('lobby');
+                if (lobbyEl) lobbyEl.style.display = 'none';
+                elements.quizScreen.style.display = 'block';
+                elements.scoreScreen.style.display = 'none';
+            } else {
+                const lobbyEl = document.getElementById('lobby');
+                if (lobbyEl) lobbyEl.style.display = 'block';
+                elements.quizScreen.style.display = 'none';
+            }
+
+            // Sync state and currentQuestion
+            if (typeof data.currentQuestion !== 'undefined') {
+                const remoteIndex = data.currentQuestion;
+                if (quizState.currentIndex !== remoteIndex) {
+                    quizState.currentIndex = remoteIndex;
+                    loadQuestion();
+                }
+            }
+
+            // If host, enable advance only when all players answered
+            if (isHost) {
+                if (typeof totalPlayers === 'number' && totalPlayers > 0) {
+                    if (answeredCount === totalPlayers) {
+                        elements.nextButton.style.display = 'block';
+                    } else {
+                        elements.nextButton.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
+
+    async function updatePlayerScore(newScore) {
+        if (!currentRoomId || !localPlayerId) return;
+        const playerRef = ref(db, `rooms/${currentRoomId}/players/${localPlayerId}`);
+        await update(playerRef, { score: newScore });
+    }
+
+    async function advanceQuestionHost() {
+        if (!isHost || !currentRoomId) return;
+        const nextIndex = quizState.currentIndex + 1;
+        const roomRef = ref(db, 'rooms/' + currentRoomId);
+        // If we've reached the end, mark room as finished for everyone
+        if (nextIndex >= quizState.data.length) {
+            await update(roomRef, { state: 'finished' });
+        } else {
+            // reset answered flags for all players and advance
+            const playersSnap = await get(ref(db, `rooms/${currentRoomId}/players`));
+            const players = playersSnap.val() || {};
+            const updates = { currentQuestion: nextIndex };
+            Object.keys(players).forEach(pid => {
+                updates[`players/${pid}/answered`] = false;
+            });
+            await update(roomRef, updates);
+        }
+    }
+
+    function showMultiplayerResults(playersObj) {
+        // hide quiz UI
+        elements.quizScreen.style.display = 'none';
+        const lobbyEl = document.getElementById('lobby'); if (lobbyEl) lobbyEl.style.display = 'none';
+        elements.scoreScreen.style.display = 'none';
+        const results = document.getElementById('multiplayer-results');
+        const list = document.getElementById('multiplayer-leaderboard');
+        if (!results || !list) return;
+        list.innerHTML = '';
+
+        // Convert playersObj to array and sort by score desc
+        const arr = Object.entries(playersObj || {}).map(([pid, p]) => ({ id: pid, name: p.name || pid, score: p.score || 0 }));
+        arr.sort((a, b) => b.score - a.score);
+
+        arr.forEach(p => {
+            const li = document.createElement('li');
+            li.innerText = `${p.name} — ${p.score}` + (p.id === (localPlayerId || '') ? ' (você)' : '');
+            list.appendChild(li);
+        });
+
+        // show appropriate buttons
+        results.style.display = 'block';
+        const leaveBtn = document.getElementById('leave-room-btn'); if (leaveBtn) leaveBtn.style.display = 'inline-block';
+        const restartBtn = document.getElementById('restart-room-btn'); if (restartBtn) restartBtn.style.display = isHost ? 'inline-block' : 'none';
+    }
+
+    async function leaveRoom() {
+        if (!currentRoomId || !localPlayerId) return;
+        try {
+            await set(ref(db, `rooms/${currentRoomId}/players/${localPlayerId}`), null);
+        } catch (e) { console.error(e); }
+        // reset local state and reload to clear UI
+        currentRoomId = null;
+        localPlayerId = null;
+        isHost = false;
+        location.reload();
+    }
+
+    async function restartRoom() {
+        if (!isHost || !currentRoomId) return alert('Apenas o host pode reiniciar a sala.');
+        const playersSnap = await get(ref(db, `rooms/${currentRoomId}/players`));
+        const players = playersSnap.val() || {};
+        // reset scores
+        const updates = {};
+        Object.keys(players).forEach(pid => {
+            updates[`players/${pid}/score`] = 0;
+        });
+        updates['state'] = 'waiting';
+        updates['currentQuestion'] = 0;
+        await update(ref(db, `rooms/${currentRoomId}`), updates);
+        // reload local state and show lobby
+        location.reload();
+    }
+
+    window.leaveRoom = leaveRoom;
+    window.restartRoom = restartRoom;
+
+    // Expose lobby functions to the window so HTML buttons can call them
+    window.createRoom = createRoom;
+    window.joinRoom = joinRoom;
+    window.startGame = startGame;
+
+    // Patch selectOption to update remote score when in a room
+    const originalSelectOption = selectOption;
+    selectOption = function(selectedIndex, selectedButton, wrongFeedbackText, globalExplanation) {
+        originalSelectOption(selectedIndex, selectedButton, wrongFeedbackText, globalExplanation);
+        // after selecting, if in a room update score
+        if (currentRoomId && localPlayerId) {
+            updatePlayerScore(quizState.score).catch(console.error);
+            // mark this player as answered for the current question
+            try {
+                update(ref(db, `rooms/${currentRoomId}/players/${localPlayerId}`), { answered: true });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
+
+    window.nextQuestion = function() {
+        // If host, advance remote index; otherwise do nothing (will be driven by room updates)
+        if (isHost && currentRoomId) {
+            advanceQuestionHost();
+        } else if (!currentRoomId) {
+            // local-only fallback
+            nextQuestion();
+        }
+    };
+
     window.restartQuiz = restartQuiz;
 
     // Executa a carga inicial do app
