@@ -1,8 +1,30 @@
+﻿  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDiA9_BfdKWW_yFbWmrsmfjuk0dlJSEiMI",
+    authDomain: "jogo-de-liz-3c8db.firebaseapp.com",
+    databaseURL: "https://jogo-de-liz-3c8db-default-rtdb.firebaseio.com",
+    projectId: "jogo-de-liz-3c8db",
+    storageBucket: "jogo-de-liz-3c8db.firebasestorage.app",
+    messagingSenderId: "992508795441",
+    appId: "1:992508795441:web:d199b07d29c4ea23b4d310",
+    measurementId: "G-MDM0ZFXYKD"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 const QUIZ_CONFIG = {
-    totalQuestionsPerRound: 10
+    totalQuestionsPerRound: 7
 };
 
-    // Base de dados 100% focada em: Ditongos, Hiatos e Acento Diferencial
+    // Base de dados
     const QUIZ_DATA = [
         {
             question: "Qual das palavras abaixo perdeu o acento agudo devido à regra dos ditongos abertos em palavras paroxítonas?",
@@ -158,7 +180,7 @@ const QUIZ_CONFIG = {
         finalScore: document.getElementById('final-score')
     };
 
-    // Algoritmo Fisher-Yates para embaralhamento perfeito
+    // Algoritmo para embaralhamento das perguntas e alternativas
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -272,6 +294,9 @@ const QUIZ_CONFIG = {
     function restartQuiz() {
         initQuiz();
     }
+
+    window.nextQuestion = nextQuestion;
+    window.restartQuiz = restartQuiz;
 
     // Executa a carga inicial do app
     initQuiz();
